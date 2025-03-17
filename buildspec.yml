@@ -3,7 +3,7 @@ version: 0.2
 env:
   variables:
     # テスト対象のアプリケーションURL（デプロイ後のURL）
-    TARGET_URL: "https://todolist-sample.com"
+    #TARGET_URL: "https://todolist-sample.com"
     # Playwrightの設定
     PLAYWRIGHT_BROWSERS_PATH: "/ms-playwright"
     # レポート保存用のS3バケット名

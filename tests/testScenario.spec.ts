@@ -108,6 +108,9 @@ test.describe('タスクの新規作成/編集/削除のシナリオテスト', 
     await expect.soft(todoListPage.tags).toContainText(registerData.tags);
       /** 画像を拡大表示 */
     await todoListPage.image.click();
+
+    await helper.sleep(3);
+    
       /** 画像がアップロードした通りのものであるか見た目を比較 */
     // await page.screenshot({ path: registerData.expectedImageFilePath }); //期待値撮影用
     await expect.soft(page).toHaveScreenshot(registerData.expectedImageFilePath);;
@@ -171,6 +174,9 @@ test.describe('タスクの新規作成/編集/削除のシナリオテスト', 
     await expect.soft(todoListPage.tags).toContainText(editData.tags);
       /** 画像を拡大表示 */
     await todoListPage.image.click();
+
+    await helper.sleep(3);
+
       /** 画像がアップロードした通りのものであるか見た目を比較 */
     await expect.soft(page).toHaveScreenshot(editData.expectedImageFilePath);
 
