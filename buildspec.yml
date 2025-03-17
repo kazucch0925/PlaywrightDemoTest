@@ -41,8 +41,10 @@ phases:
       - echo "Running E2E tests with Playwright"
       # CodeBuildはヘッドレス環境のため、--headedオプションは削除
       # CI環境ではスクリーンショット比較が失敗する可能性があるため、--update-snapshotsオプションを追加
-      # HTMLレポートを生成するが、サーバーを起動しないようにする
-      - npx playwright test --workers=1 tests/testScenario.spec.ts --reporter=html --output=playwright-report --reporter-option=open=never --update-snapshots || true
+      # JSONレポートを生成し、サーバーを起動しない問題を回避
+      - npx playwright test --workers=1 tests/testScenario.spec.ts --reporter=json --output=playwright-report/test-results.json --update-snapshots || true
+      # HTMLレポートを別途生成
+      - npx playwright show-report playwright-report/test-results.json --output playwright-report || true
       - echo "E2E tests completed"
 
   post_build:
