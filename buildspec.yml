@@ -65,21 +65,24 @@ phases:
       - set -e  # 通常の終了コード処理に戻す
       - echo "Generating test summary"
       
-      # AWS CLIのパスを確認
-      - which aws
+      # AWS CLIのパスを確認（エラーが発生しても続行）
+      - which aws || echo "AWS CLI not found, skipping S3 upload"
       - echo "PATH環境変数の内容を表示"
       - echo $PATH
       
       # playwright-reportディレクトリの内容を確認
       - echo "Checking playwright-report directory:"
-      - ls -la playwright-report
+      - ls -la playwright-report || echo "playwright-report directory not found"
       
-      # 日付文字列を作成（シンプルな形式に変更）
-      - REPORT_FOLDER=playwright_report_$(date +%Y%m%d_%H%M%S)
-      
-      # S3バケットにレポートをアップロード
-      - echo "Uploading reports to S3 bucket"
-      - aws s3 cp --recursive playwright-report s3://$REPORT_S3_BUCKET/e2e/$REPORT_FOLDER/
+      # AWS CLIが存在する場合のみS3にアップロード
+      - |
+        if which aws > /dev/null 2>&1; then
+          echo "AWS CLI found, uploading reports to S3"
+          REPORT_FOLDER=playwright_report_$(date +%Y%m%d_%H%M%S)
+          aws s3 cp --recursive playwright-report s3://$REPORT_S3_BUCKET/e2e/$REPORT_FOLDER/ || echo "S3 upload failed"
+        else
+          echo "AWS CLI not available, skipping S3 upload"
+        fi
       - echo "Test reports uploaded to S3"
 
 reports:
