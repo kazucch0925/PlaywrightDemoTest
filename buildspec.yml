@@ -23,6 +23,16 @@ phases:
       - echo "Installing test dependencies"
       - echo "Setting up Playwright"
       
+      # AWS CLIがインストールされているか確認
+      - which aws || echo "AWS CLI not found"
+      - aws --version || echo "AWS CLI version command failed"
+      
+      # AWS CLIがない場合はインストール
+      - apt-get update && apt-get install -y awscli || echo "Failed to install AWS CLI with apt-get"
+      - pip install awscli --upgrade --user || echo "Failed to install AWS CLI with pip"
+      - export PATH=$PATH:$HOME/.local/bin
+      - which aws || echo "AWS CLI still not found after installation attempts"
+      
       # プロジェクトの依存関係をインストール
       - npm ci
       
@@ -45,8 +55,8 @@ phases:
       - echo "Running E2E tests with Playwright"
       # CodeBuildはヘッドレス環境のため、--headedオプションは削除
       # CI環境ではスクリーンショット比較が失敗する可能性があるため、--update-snapshotsオプションを追加
-      # HTMLレポートを直接生成（PLAYWRIGHT_HTML_REPORT_OPEN=0により自動ブラウザ起動を防止）
-      - npx playwright test --workers=1 tests/testScenario.spec.ts --reporter=html --update-snapshots || true
+      # dot,htmlレポーターを使用してHTMLレポートを生成しつつ、サーバーの起動を防止
+      - npx playwright test --workers=1 tests/testScenario.spec.ts --reporter=dot,html --update-snapshots || true
       - echo "E2E tests completed"
 
   post_build:
