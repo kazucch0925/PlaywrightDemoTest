@@ -66,18 +66,20 @@ phases:
       - echo "Generating test summary"
       
       # AWS CLIのパスを確認
-      - echo "AWS CLI path: $(which aws || echo 'not found')"
-      - echo "PATH: $PATH"
+      - which aws
+      - echo "PATH環境変数の内容を表示"
+      - echo $PATH
       
       # playwright-reportディレクトリの内容を確認
       - echo "Checking playwright-report directory:"
-      - ls -la playwright-report || echo "playwright-report directory not found"
+      - ls -la playwright-report
       
-      # S3バケットにレポートをアップロード（詳細なデバッグ情報を出力）
-      - echo "Uploading reports to S3 bucket: $REPORT_S3_BUCKET"
-      - export REPORT_DATE=$(date +%Y-%m-%d_%H-%M-%S)
-      - echo "Report date: $REPORT_DATE"
-      - aws s3 cp --recursive playwright-report s3://$REPORT_S3_BUCKET/e2e/playwright_report_$REPORT_DATE/ --debug || echo "Failed to upload reports to S3"
+      # 日付文字列を作成（シンプルな形式に変更）
+      - REPORT_FOLDER=playwright_report_$(date +%Y%m%d_%H%M%S)
+      
+      # S3バケットにレポートをアップロード
+      - echo "Uploading reports to S3 bucket"
+      - aws s3 cp --recursive playwright-report s3://$REPORT_S3_BUCKET/e2e/$REPORT_FOLDER/
       - echo "Test reports uploaded to S3"
 
 reports:
