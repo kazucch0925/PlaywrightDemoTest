@@ -6,6 +6,8 @@ env:
     #TARGET_URL: "https://todolist-sample.com"
     # Playwrightの設定
     PLAYWRIGHT_BROWSERS_PATH: "/ms-playwright"
+    # HTMLレポートを生成した後にブラウザを自動で起動しない
+    PLAYWRIGHT_HTML_REPORT_OPEN: "0"
     # レポート保存用のS3バケット名
     REPORT_S3_BUCKET: "playwright-reports-v1"
   # secrets-manager:
@@ -41,10 +43,8 @@ phases:
       - echo "Running E2E tests with Playwright"
       # CodeBuildはヘッドレス環境のため、--headedオプションは削除
       # CI環境ではスクリーンショット比較が失敗する可能性があるため、--update-snapshotsオプションを追加
-      # JSONレポートを生成し、サーバーを起動しない問題を回避
-      - npx playwright test --workers=1 tests/testScenario.spec.ts --reporter=json --output=playwright-report/test-results.json --update-snapshots || true
-      # HTMLレポートを別途生成
-      - npx playwright show-report playwright-report/test-results.json --output playwright-report || true
+      # HTMLレポートを直接生成（PLAYWRIGHT_HTML_REPORT_OPEN=0により自動ブラウザ起動を防止）
+      - npx playwright test --workers=1 tests/testScenario.spec.ts --reporter=html --update-snapshots || true
       - echo "E2E tests completed"
 
   post_build:
