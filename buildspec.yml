@@ -8,6 +8,8 @@ env:
     PLAYWRIGHT_BROWSERS_PATH: "/ms-playwright"
     # HTMLレポートを生成した後にブラウザを自動で起動しない
     PLAYWRIGHT_HTML_REPORT_OPEN: "0"
+    # CIモードを強制的に有効にする
+    CI: "1"
     # レポート保存用のS3バケット名
     REPORT_S3_BUCKET: "playwright-reports-v1"
   # secrets-manager:
