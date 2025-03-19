@@ -90,6 +90,22 @@ phases:
       - echo "Checking files in playwright-report/data directory:"
       - find playwright-report/data -type f -exec file {} \; || echo "No files found in playwright-report/data"
       
+      # Zipファイルを解凍して内容を確認
+      - echo "Extracting and checking zip files:"
+      - mkdir -p extracted-diffs
+      - find playwright-report/data -name "*.zip" -exec sh -c 'unzip -o "$0" -d extracted-diffs/$(basename "$0" .zip)' {} \; || echo "No zip files found or extraction failed"
+      - ls -la extracted-diffs || echo "No extracted files"
+      - find extracted-diffs -type f -exec file {} \; || echo "No files found in extracted-diffs"
+      
+      # 解凍したファイルをplaywright-report/dataディレクトリにコピー
+      - echo "Copying extracted files to playwright-report/data directory:"
+      - find extracted-diffs -type f -name "*.png" -exec cp {} playwright-report/data/ \; || echo "No PNG files found in extracted-diffs"
+      
+      # HTMLファイル内のリンクを確認
+      - echo "Checking links in HTML files:"
+      - grep -r "\.png" --include="*.html" playwright-report/ || echo "No PNG links found in HTML files"
+      - grep -r "\.zip" --include="*.html" playwright-report/ || echo "No ZIP links found in HTML files"
+      
       # test-resultsディレクトリの内容を確認
       - echo "Checking test-results directory:"
       - ls -la test-results || echo "test-results directory not found"
@@ -145,6 +161,13 @@ phases:
             --content-type "image/png" \
             --exclude "*" \
             --include "*-diff.png" || echo "S3 upload of diff PNG files failed"
+          
+          # 解凍したdiff画像をアップロード
+          if [ -d "extracted-diffs" ]; then
+            echo "Uploading extracted diff files"
+            aws s3 cp --recursive extracted-diffs s3://$REPORT_S3_BUCKET/e2e/$REPORT_FOLDER/extracted-diffs/ \
+              --content-type "image/png" || echo "S3 upload of extracted diff files failed"
+          fi
           
           # スクリーンショット比較用のファイルをアップロード
           if [ -d "screenshot-comparison" ]; then
