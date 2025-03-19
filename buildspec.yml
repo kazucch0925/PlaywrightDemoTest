@@ -52,9 +52,9 @@ phases:
       # E2Eテスト（Playwright）の実行
       - echo "Running E2E tests with Playwright"
       # CodeBuildはヘッドレス環境のため、--headedオプションは削除
-      # CI環境ではスクリーンショット比較が失敗する可能性があるため、--update-snapshotsオプションを追加
       # dot,htmlレポーターを使用してHTMLレポートを生成しつつ、サーバーの起動を防止
-      - npx playwright test --workers=1 tests/testScenario.spec.ts --reporter=dot,html --update-snapshots || true
+      # --update-snapshotsオプションを削除（スクリーンショット比較の期待値を更新しない）
+      - npx playwright test --workers=1 tests/testScenario.spec.ts --reporter=dot,html || true
       - echo "E2E tests completed"
 
   post_build:
