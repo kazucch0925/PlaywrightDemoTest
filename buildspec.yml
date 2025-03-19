@@ -71,6 +71,8 @@ phases:
       # playwright-reportディレクトリの内容を確認
       - echo "Checking playwright-report directory:"
       - ls -la playwright-report || echo "playwright-report directory not found"
+      - echo "Checking playwright-report/data directory:"
+      - ls -la playwright-report/data || echo "playwright-report/data directory not found"
       
       # スクリーンショット比較用のファイルを確認
       - echo "Checking screenshot comparison files:"
@@ -80,7 +82,18 @@ phases:
       
       # スクリーンショット比較用のファイルのContent-Typeを確認
       - echo "Checking Content-Type of screenshot comparison files:"
+      - find playwright-report -name "*-actual.png" -exec file {} \; || echo "No actual screenshots found"
+      - find playwright-report -name "*-expected.png" -exec file {} \; || echo "No expected screenshots found"
       - find playwright-report -name "*-diff.png" -exec file {} \; || echo "No diff screenshots found"
+      
+      # playwright-report/dataディレクトリ内のファイルを詳細に確認
+      - echo "Checking files in playwright-report/data directory:"
+      - find playwright-report/data -type f -exec file {} \; || echo "No files found in playwright-report/data"
+      
+      # test-resultsディレクトリの内容を確認
+      - echo "Checking test-results directory:"
+      - ls -la test-results || echo "test-results directory not found"
+      - find test-results -type f -exec file {} \; || echo "No files found in test-results"
       
       # AWS CLIが存在する場合のみS3にアップロード
       - |
