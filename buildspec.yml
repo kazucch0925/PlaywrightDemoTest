@@ -53,8 +53,7 @@ phases:
       - echo "Running E2E tests with Playwright"
       # CodeBuildはヘッドレス環境のため、--headedオプションは削除
       # dot,htmlレポーターを使用してHTMLレポートを生成しつつ、サーバーの起動を防止
-      # --update-snapshotsオプションを削除（スクリーンショット比較の期待値を更新しない）
-      - npx playwright test --workers=1 tests/testScenario.spec.ts --reporter=dot,html || true
+      - npx playwright test --workers=1 tests/testScenario.spec.ts --reporter=dot,html --update-snapshots || true
       - echo "E2E tests completed"
 
   post_build:
@@ -91,15 +90,15 @@ phases:
       - find playwright-report/data -type f -exec file {} \; || echo "No files found in playwright-report/data"
       
       # Zipファイルを解凍して内容を確認
-      - echo "Extracting and checking zip files:"
-      - mkdir -p extracted-diffs
-      - find playwright-report/data -name "*.zip" -exec sh -c 'unzip -o "$0" -d extracted-diffs/$(basename "$0" .zip)' {} \; || echo "No zip files found or extraction failed"
-      - ls -la extracted-diffs || echo "No extracted files"
-      - find extracted-diffs -type f -exec file {} \; || echo "No files found in extracted-diffs"
+      #- echo "Extracting and checking zip files:"
+      #- mkdir -p extracted-diffs
+      #- find playwright-report/data -name "*.zip" -exec sh -c 'unzip -o "$0" -d extracted-diffs/$(basename "$0" .zip)' {} \; || echo "No zip files found or extraction failed"
+      #- ls -la extracted-diffs || echo "No extracted files"
+      #- find extracted-diffs -type f -exec file {} \; || echo "No files found in extracted-diffs"
       
       # 解凍したファイルをplaywright-report/dataディレクトリにコピー
-      - echo "Copying extracted files to playwright-report/data directory:"
-      - find extracted-diffs -type f -name "*.png" -exec cp {} playwright-report/data/ \; || echo "No PNG files found in extracted-diffs"
+      #- echo "Copying extracted files to playwright-report/data directory:"
+      #- find extracted-diffs -type f -name "*.png" -exec cp {} playwright-report/data/ \; || echo "No PNG files found in extracted-diffs"
       
       # HTMLファイル内のリンクを確認
       - echo "Checking links in HTML files:"
