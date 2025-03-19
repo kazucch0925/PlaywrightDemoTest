@@ -77,7 +77,43 @@ phases:
         if which aws > /dev/null 2>&1; then
           echo "AWS CLI found, uploading reports to S3"
           REPORT_FOLDER=playwright_report_$(date +%Y%m%d_%H%M%S)
-          aws s3 cp --recursive playwright-report s3://$REPORT_S3_BUCKET/e2e/$REPORT_FOLDER/ || echo "S3 upload failed"
+          
+          # HTMLファイルのContent-Typeを設定
+          aws s3 cp --recursive playwright-report s3://$REPORT_S3_BUCKET/e2e/$REPORT_FOLDER/ \
+            --content-type "text/html" \
+            --exclude "*" \
+            --include "*.html" || echo "S3 upload of HTML files failed"
+          
+          # CSSファイルのContent-Typeを設定
+          aws s3 cp --recursive playwright-report s3://$REPORT_S3_BUCKET/e2e/$REPORT_FOLDER/ \
+            --content-type "text/css" \
+            --exclude "*" \
+            --include "*.css" || echo "S3 upload of CSS files failed"
+          
+          # JSファイルのContent-Typeを設定
+          aws s3 cp --recursive playwright-report s3://$REPORT_S3_BUCKET/e2e/$REPORT_FOLDER/ \
+            --content-type "application/javascript" \
+            --exclude "*" \
+            --include "*.js" || echo "S3 upload of JS files failed"
+          
+          # 画像ファイルのContent-Typeを設定
+          aws s3 cp --recursive playwright-report s3://$REPORT_S3_BUCKET/e2e/$REPORT_FOLDER/ \
+            --content-type "image/png" \
+            --exclude "*" \
+            --include "*.png" || echo "S3 upload of PNG files failed"
+          
+          # その他のファイルをアップロード
+          aws s3 cp --recursive playwright-report s3://$REPORT_S3_BUCKET/e2e/$REPORT_FOLDER/ \
+            --exclude "*.html" \
+            --exclude "*.css" \
+            --exclude "*.js" \
+            --exclude "*.png" || echo "S3 upload of other files failed"
+          
+          # test-resultsディレクトリもアップロード
+          if [ -d "test-results" ]; then
+            echo "Uploading test-results directory"
+            aws s3 cp --recursive test-results s3://$REPORT_S3_BUCKET/e2e/$REPORT_FOLDER/test-results/ || echo "S3 upload of test-results failed"
+          fi
         else
           echo "AWS CLI not available, skipping S3 upload"
         fi

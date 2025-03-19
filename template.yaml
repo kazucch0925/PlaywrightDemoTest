@@ -199,6 +199,19 @@ Resources:
           - Id: DeleteOldReports
             Status: Enabled
             ExpirationInDays: 30
+      CorsConfiguration:
+        CorsRules:
+          - AllowedHeaders:
+              - '*'
+            AllowedMethods:
+              - GET
+              - HEAD
+            AllowedOrigins:
+              - '*'
+            MaxAge: 3600
+      WebsiteConfiguration:
+        IndexDocument: index.html
+        ErrorDocument: error.html
       Tags:
         - Key: Name
           Value: !Sub "${AWS::StackName}-PlaywrightReportsBucket"
@@ -206,6 +219,21 @@ Resources:
           Value: !FindInMap [TagMap, DefaultTags, Project]
         - Key: Environment
           Value: !FindInMap [TagMap, DefaultTags, Environment]
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+
+  PlaywrightReportsBucketPolicy:
+    Type: 'AWS::S3::BucketPolicy'
+    Properties:
+      Bucket: !Ref PlaywrightReportsBucket
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal: '*'
+            Action:
+              - 's3:GetObject'
+            Resource: !Sub 'arn:aws:s3:::${PlaywrightReportsBucketName}/*'
     DeletionPolicy: Delete
     UpdateReplacePolicy: Delete
   
