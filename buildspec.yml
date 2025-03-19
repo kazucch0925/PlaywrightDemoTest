@@ -110,89 +110,16 @@ phases:
       - ls -la test-results || echo "test-results directory not found"
       - find test-results -type f -exec file {} \; || echo "No files found in test-results"
       
-      # AWS CLIが存在する場合のみS3にアップロード
-      - |
-        if which aws > /dev/null 2>&1; then
-          echo "AWS CLI found, uploading reports to S3"
-          REPORT_FOLDER=playwright_report_$(date +%Y%m%d_%H%M%S)
+      # S3にアップロード
+      - echo "Uploading reports to S3"
+      - REPORT_FOLDER=playwright_report_$(date +%Y%m%d_%H%M%S)
           
-          # スクリーンショット比較用のファイルをコピー
-          echo "Copying screenshot comparison files to separate directory"
-          mkdir -p screenshot-comparison
-          find playwright-report -name "*-actual.png" -exec cp {} screenshot-comparison/ \;
-          find playwright-report -name "*-expected.png" -exec cp {} screenshot-comparison/ \;
-          find playwright-report -name "*-diff.png" -exec cp {} screenshot-comparison/ \;
-          
-          # HTMLファイルのContent-Typeを設定
-          aws s3 cp --recursive playwright-report s3://$REPORT_S3_BUCKET/e2e/$REPORT_FOLDER/ \
-            --content-type "text/html" \
-            --exclude "*" \
-            --include "*.html" || echo "S3 upload of HTML files failed"
-          
-          # CSSファイルのContent-Typeを設定
-          aws s3 cp --recursive playwright-report s3://$REPORT_S3_BUCKET/e2e/$REPORT_FOLDER/ \
-            --content-type "text/css" \
-            --exclude "*" \
-            --include "*.css" || echo "S3 upload of CSS files failed"
-          
-          # JSファイルのContent-Typeを設定
-          aws s3 cp --recursive playwright-report s3://$REPORT_S3_BUCKET/e2e/$REPORT_FOLDER/ \
-            --content-type "application/javascript" \
-            --exclude "*" \
-            --include "*.js" || echo "S3 upload of JS files failed"
-          
-          # PNG画像ファイルのContent-Typeを設定
-          aws s3 cp --recursive playwright-report s3://$REPORT_S3_BUCKET/e2e/$REPORT_FOLDER/ \
-            --content-type "image/png" \
-            --exclude "*" \
-            --include "*.png" \
-            --exclude "*-diff.png" || echo "S3 upload of PNG files failed"
-          
-          # JPG画像ファイルのContent-Typeを設定
-          aws s3 cp --recursive playwright-report s3://$REPORT_S3_BUCKET/e2e/$REPORT_FOLDER/ \
-            --content-type "image/jpeg" \
-            --exclude "*" \
-            --include "*.jpg" \
-            --include "*.jpeg" || echo "S3 upload of JPG files failed"
-          
-          # diff画像ファイルのContent-Typeを設定（-diff.pngで終わるファイル）
-          aws s3 cp --recursive playwright-report s3://$REPORT_S3_BUCKET/e2e/$REPORT_FOLDER/ \
-            --content-type "image/png" \
-            --exclude "*" \
-            --include "*-diff.png" || echo "S3 upload of diff PNG files failed"
-          
-          # 解凍したdiff画像をアップロード
-          if [ -d "extracted-diffs" ]; then
-            echo "Uploading extracted diff files"
-            aws s3 cp --recursive extracted-diffs s3://$REPORT_S3_BUCKET/e2e/$REPORT_FOLDER/extracted-diffs/ \
-              --content-type "image/png" || echo "S3 upload of extracted diff files failed"
-          fi
-          
-          # スクリーンショット比較用のファイルをアップロード
-          if [ -d "screenshot-comparison" ]; then
-            echo "Uploading screenshot comparison files"
-            aws s3 cp --recursive screenshot-comparison s3://$REPORT_S3_BUCKET/e2e/$REPORT_FOLDER/screenshot-comparison/ \
-              --content-type "image/png" || echo "S3 upload of screenshot comparison files failed"
-          fi
-          
-          # その他のファイルをアップロード
-          aws s3 cp --recursive playwright-report s3://$REPORT_S3_BUCKET/e2e/$REPORT_FOLDER/ \
-            --exclude "*.html" \
-            --exclude "*.css" \
-            --exclude "*.js" \
-            --exclude "*.png" \
-            --exclude "*.jpg" \
-            --exclude "*.jpeg" || echo "S3 upload of other files failed"
-          
-          # test-resultsディレクトリもアップロード
-          if [ -d "test-results" ]; then
-            echo "Uploading test-results directory"
-            aws s3 cp --recursive test-results s3://$REPORT_S3_BUCKET/e2e/$REPORT_FOLDER/test-results/ || echo "S3 upload of test-results failed"
-          fi
-        else
-          echo "AWS CLI not available, skipping S3 upload"
-        fi
-      - echo "Test reports uploaded to S3"
+      # スクリーンショット比較用のファイルをコピー
+      - echo "Copying screenshot comparison files to separate directory"
+      - mkdir -p screenshot-comparison
+      - find playwright-report -name "*-actual.png" -exec cp {} screenshot-comparison/ \;
+      - find playwright-report -name "*-expected.png" -exec cp {} screenshot-comparison/ \;
+      - find playwright-report -name "*-diff.png" -exec cp {} screenshot-comparison/ \;
 
 reports:
   e2e-reports:
