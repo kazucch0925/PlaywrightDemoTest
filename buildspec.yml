@@ -62,11 +62,6 @@ phases:
       - set -e  # 通常の終了コード処理に戻す
       - echo "Generating test summary"
       
-      # AWS CLIのパスを確認（エラーが発生しても続行）
-      - which aws || echo "AWS CLI not found, skipping S3 upload"
-      - echo "PATH環境変数の内容を表示"
-      - echo $PATH
-      
       # playwright-reportディレクトリの内容を確認
       - echo "Checking playwright-report directory:"
       - ls -la playwright-report || echo "playwright-report directory not found"
@@ -79,31 +74,9 @@ phases:
       - find playwright-report -name "*-expected.png" || echo "No expected screenshots found"
       - find playwright-report -name "*-diff.png" || echo "No diff screenshots found"
       
-      # スクリーンショット比較用のファイルのContent-Typeを確認
-      - echo "Checking Content-Type of screenshot comparison files:"
-      - find playwright-report -name "*-actual.png" -exec file {} \; || echo "No actual screenshots found"
-      - find playwright-report -name "*-expected.png" -exec file {} \; || echo "No expected screenshots found"
-      - find playwright-report -name "*-diff.png" -exec file {} \; || echo "No diff screenshots found"
-      
       # playwright-report/dataディレクトリ内のファイルを詳細に確認
       - echo "Checking files in playwright-report/data directory:"
       - find playwright-report/data -type f -exec file {} \; || echo "No files found in playwright-report/data"
-      
-      # Zipファイルを解凍して内容を確認
-      #- echo "Extracting and checking zip files:"
-      #- mkdir -p extracted-diffs
-      #- find playwright-report/data -name "*.zip" -exec sh -c 'unzip -o "$0" -d extracted-diffs/$(basename "$0" .zip)' {} \; || echo "No zip files found or extraction failed"
-      #- ls -la extracted-diffs || echo "No extracted files"
-      #- find extracted-diffs -type f -exec file {} \; || echo "No files found in extracted-diffs"
-      
-      # 解凍したファイルをplaywright-report/dataディレクトリにコピー
-      #- echo "Copying extracted files to playwright-report/data directory:"
-      #- find extracted-diffs -type f -name "*.png" -exec cp {} playwright-report/data/ \; || echo "No PNG files found in extracted-diffs"
-      
-      # HTMLファイル内のリンクを確認
-      - echo "Checking links in HTML files:"
-      - grep -r "\.png" --include="*.html" playwright-report/ || echo "No PNG links found in HTML files"
-      - grep -r "\.zip" --include="*.html" playwright-report/ || echo "No ZIP links found in HTML files"
       
       # test-resultsディレクトリの内容を確認
       - echo "Checking test-results directory:"
@@ -113,13 +86,6 @@ phases:
       # S3にアップロード
       - echo "Uploading reports to S3"
       - REPORT_FOLDER=playwright_report_$(date +%Y%m%d_%H%M%S)
-          
-      # スクリーンショット比較用のファイルをコピー
-      - echo "Copying screenshot comparison files to separate directory"
-      - mkdir -p screenshot-comparison
-      - find playwright-report -name "*-actual.png" -exec cp {} screenshot-comparison/ \;
-      - find playwright-report -name "*-expected.png" -exec cp {} screenshot-comparison/ \;
-      - find playwright-report -name "*-diff.png" -exec cp {} screenshot-comparison/ \;
 
 reports:
   e2e-reports:
