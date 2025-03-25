@@ -44,7 +44,7 @@ test.describe('タスクの新規作成/編集/削除のシナリオテスト', 
     expectedDueDate: "2025/4/25",
     tags: "テストタグ1, テストタグ2",
     imageFilePath: "./tests/testImageFiles/sampleImage1.png",
-    expectedImageFilePath: "./tests/expectedTestImageFiles/newTaskImageExpected.png",
+    expectedImageFilePath: "newTaskImageExpected.png",
   };
   
   /** 編集のデータと更新後の期待値 */
@@ -56,7 +56,7 @@ test.describe('タスクの新規作成/編集/削除のシナリオテスト', 
     expectedDueDate: "2025/4/28",
     tags: "テストタグ2, テストタグ3",
     imageFilePath: "./tests/testImageFiles/sampleImage2.jpg",
-    expectedImageFilePath: "./tests/expectedTestImageFiles/editTaskImageExpected.png",
+    expectedImageFilePath: "editTaskImageExpected.png",
   };
 
 
@@ -108,13 +108,10 @@ test.describe('タスクの新規作成/編集/削除のシナリオテスト', 
     await expect.soft(todoListPage.tags).toContainText(registerData.tags);
       /** 画像を拡大表示 */
     await todoListPage.image.click();
-
     await helper.sleep(3);
-    
       /** 画像がアップロードした通りのものであるか見た目を比較 */
-    // await page.screenshot({ path: registerData.expectedImageFilePath }); //期待値撮影用
-    await expect.soft(page).toHaveScreenshot(registerData.expectedImageFilePath);;
-    
+    await expect(await page.screenshot()).toMatchSnapshot(registerData.expectedImageFilePath);
+  
       /** 画像のフルサイズ表示を閉じる */
     await todoListPage.closeFullImage.click();
 
@@ -174,11 +171,9 @@ test.describe('タスクの新規作成/編集/削除のシナリオテスト', 
     await expect.soft(todoListPage.tags).toContainText(editData.tags);
       /** 画像を拡大表示 */
     await todoListPage.image.click();
-
     await helper.sleep(3);
-
       /** 画像がアップロードした通りのものであるか見た目を比較 */
-    await expect.soft(page).toHaveScreenshot(editData.expectedImageFilePath);
+    await expect(await page.screenshot()).toMatchSnapshot(editData.expectedImageFilePath);
 
       /** 画像のフルサイズ表示を閉じる */
     await todoListPage.closeFullImage.click();
