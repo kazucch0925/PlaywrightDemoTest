@@ -53,7 +53,7 @@ phases:
       - echo "Running E2E tests with Playwright"
       # CodeBuildはヘッドレス環境のため、--headedオプションは削除
       # dot,htmlレポーターを使用してHTMLレポートを生成しつつ、サーバーの起動を防止
-      - npx playwright test --workers=1 tests/testScenario.spec.ts --reporter=html --update-snapshots || true
+      - npx playwright test --workers=1 tests/testScenario.spec.ts --reporter=dot,html --update-snapshots || true
       - echo "E2E tests completed"
 
   post_build:
@@ -62,26 +62,9 @@ phases:
       - set -e  # 通常の終了コード処理に戻す
       - echo "Generating test summary"
       
-      # playwright-reportディレクトリの内容を確認
-      - echo "Checking playwright-report directory:"
-      - ls -la playwright-report || echo "playwright-report directory not found"
-      - echo "Checking playwright-report/data directory:"
-      - ls -la playwright-report/data || echo "playwright-report/data directory not found"
-      
-      # スクリーンショット比較用のファイルを確認
-      - echo "Checking screenshot comparison files:"
-      - find playwright-report -name "*-actual.png" || echo "No actual screenshots found"
-      - find playwright-report -name "*-expected.png" || echo "No expected screenshots found"
-      - find playwright-report -name "*-diff.png" || echo "No diff screenshots found"
-      
       # playwright-report/dataディレクトリ内のファイルを詳細に確認
       - echo "Checking files in playwright-report/data directory:"
       - find playwright-report/data -type f -exec file {} \; || echo "No files found in playwright-report/data"
-      
-      # test-resultsディレクトリの内容を確認
-      - echo "Checking test-results directory:"
-      - ls -la test-results || echo "test-results directory not found"
-      - find test-results -type f -exec file {} \; || echo "No files found in test-results"
       
       # S3にアップロード
       - echo "Uploading reports to S3"
