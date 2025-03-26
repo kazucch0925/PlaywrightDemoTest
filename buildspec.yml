@@ -64,9 +64,9 @@ phases:
       # S3にアップロード
       - echo "Uploading reports to S3"
       - REPORT_FOLDER=playwright_report_$(date +%Y%m%d_%H%M%S)
-      - aws s3 cp playwright-report s3://$REPORT_S3_BUCKET/e2e/$REPORT_FOLDER --recursive --acl bucket-owner-full-control
-      - echo "Reports uploaded to S3 bucket $REPORT_S3_BUCKET/e2e/$REPORT_FOLDER"
-      - echo "S3 URL: s3://$REPORT_S3_BUCKET/e2e/$REPORT_FOLDER/"
+      - aws s3 cp playwright-report s3://$REPORT_S3_BUCKET/$REPORT_FOLDER --recursive --acl bucket-owner-full-control
+      - echo "Reports uploaded to S3 bucket $REPORT_S3_BUCKET/$REPORT_FOLDER"
+      - echo "Report URL s3://$REPORT_S3_BUCKET/$REPORT_FOLDER/"
 
 reports:
   e2e-reports:
