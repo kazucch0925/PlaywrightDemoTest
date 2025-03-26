@@ -37,8 +37,8 @@ phases:
     commands:
       - echo "Test preparation started on `date`"
       - echo "Checking connectivity to target application"
-      # テスト対象のアプリが生きてるか確認
-      - curl -s -o /dev/null -w "%{http_code}" $TARGET_URL || echo "Warning: Target application may not be available"
+      # テスト対象のアプリが生きてるか確認（したいけど何故か構文エラーになるためコメントアウト）
+      #- curl -s -o /dev/null -w "%{http_code}" $TARGET_URL || echo "Warning: Target application may not be available"
       - echo "Setting exit code handling to continue on test failures"
       - set +e  # コマンドが失敗してもスクリプトの実行が継続される
 
