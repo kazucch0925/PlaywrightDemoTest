@@ -283,12 +283,41 @@ Resources:
         - Key: Environment
           Value: !FindInMap [TagMap, DefaultTags, Environment]
 
+  SNSTopicPolicy:
+    Type: 'AWS::SNS::TopicPolicy'
+    Properties:
+      Topics:
+        - !Ref PipelineNotificationTopic
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - 'codepipeline.amazonaws.com'
+                - 'codebuild.amazonaws.com'
+                - 'codestar-notifications.amazonaws.com'
+            Action: 'sns:Publish'
+            Resource: !Ref PipelineNotificationTopic
+          - Effect: Allow
+            Principal: '*'
+            Action: 'sns:Publish'
+            Resource: !Ref PipelineNotificationTopic
+            Condition:
+              StringEquals:
+                'AWS:SourceOwner': !Ref 'AWS::AccountId'
+
   EmailSubscription:
     Type: 'AWS::SNS::Subscription'
     Properties:
       Protocol: email
       TopicArn: !Ref PipelineNotificationTopic
       Endpoint: !Ref NotificationEmail
+      FilterPolicy:
+        source:
+          - 'aws.codepipeline'
+          - 'aws.codebuild'
+          - 'aws.codestar-notifications'
 
   SlackNotificationFunction:
     Type: 'AWS::Lambda::Function'
@@ -298,47 +327,172 @@ Resources:
       Role: !GetAtt SlackNotificationRole.Arn
       Runtime: nodejs18.x
       Timeout: 30
+      MemorySize: 256
       Environment:
         Variables:
           SLACK_WEBHOOK_URL: !Ref SlackWebhookUrl
+          PLAYWRIGHT_REPORTS_BUCKET: !Ref PlaywrightReportsBucket
+          REGION: !Ref Region
       Code:
         ZipFile: |
           const https = require('https');
-          const url = require('url');
-
+          // aws-sdkはLambdaランタイムにすでに含まれているのでrequireで直接使用できます
+          const AWS = require('aws-sdk');
+          
+          // S3クライアントの初期化
+          const s3 = new AWS.S3({ region: process.env.REGION });
+          
           exports.handler = async (event) => {
-              console.log('Event:', JSON.stringify(event, null, 2));
+              console.log('Event received:', JSON.stringify(event, null, 2));
               
-              // SNSメッセージを解析
-              const message = event.Records[0].Sns.Message;
-              const subject = event.Records[0].Sns.Subject || 'CI/CD Pipeline Notification';
-              
-              let color = '#36a64f'; // デフォルトは緑色
-              if (message.includes('FAILED') || message.includes('失敗')) {
-                  color = '#ff0000'; // 失敗は赤色
-              } else if (message.includes('STARTED') || message.includes('開始')) {
-                  color = '#ffcc00'; // 開始は黄色
+              try {
+                  if (!event.Records || !event.Records[0] || !event.Records[0].Sns) {
+                      console.error('Invalid event structure:', JSON.stringify(event));
+                      return {
+                          statusCode: 400,
+                          body: 'Invalid event structure'
+                      };
+                  }
+
+                  // SNSメッセージを解析
+                  const snsMessage = event.Records[0].Sns;
+                  const messageStr = snsMessage.Message;
+                  const subject = snsMessage.Subject || 'CI/CD Pipeline Notification';
+                  
+                  console.log('SNS Message:', messageStr);
+                  console.log('Subject:', subject);
+                  
+                  let parsedMessage;
+                  try {
+                      // JSONの場合はパース
+                      parsedMessage = JSON.parse(messageStr);
+                  } catch (e) {
+                      // テキストメッセージの場合はそのまま使用
+                      parsedMessage = messageStr;
+                  }
+                  
+                  const messageText = typeof parsedMessage === 'object' 
+                      ? JSON.stringify(parsedMessage, null, 2) 
+                      : parsedMessage;
+                  
+                  let color = '#36a64f'; // デフォルトは緑色
+                  const messageContent = messageText.toLowerCase();
+                  if (messageContent.includes('failed') || messageContent.includes('failure') || messageContent.includes('失敗')) {
+                      color = '#ff0000'; // 失敗は赤色
+                  } else if (messageContent.includes('started') || messageContent.includes('in progress') || messageContent.includes('開始')) {
+                      color = '#ffcc00'; // 開始は黄色
+                  }
+                  
+                  // テスト完了の通知の場合、S3からテスト結果のURLを取得
+                  let testReportText = '';
+                  if ((messageContent.includes('succeeded') || messageContent.includes('failed')) && 
+                      (subject.includes('Test') || subject.includes('test') || messageContent.includes('test'))) {
+                      try {
+                          const reportUrl = await getLatestTestReportUrl();
+                          if (reportUrl) {
+                              testReportText = `\n\n*テスト結果レポート*: <${reportUrl}|ここをクリックして確認する>`;
+                          }
+                      } catch (error) {
+                          console.error('テストレポートURL取得エラー:', error);
+                      }
+                  }
+                  
+                  // Slackメッセージを構築
+                  const slackMessage = {
+                      text: `*${subject}*`,
+                      attachments: [{
+                          color: color,
+                          text: messageText + testReportText,
+                          footer: 'AWS CodePipeline Notification',
+                          ts: Math.floor(Date.now() / 1000)
+                      }]
+                  };
+                  
+                  console.log('Slack message:', JSON.stringify(slackMessage));
+                  
+                  // Slackに送信
+                  const webhookUrl = process.env.SLACK_WEBHOOK_URL;
+                  if (!webhookUrl) {
+                      throw new Error('SLACK_WEBHOOK_URL環境変数が設定されていません');
+                  }
+                  
+                  const parsedUrl = new URL(webhookUrl);
+                  const options = {
+                      hostname: parsedUrl.hostname,
+                      path: parsedUrl.pathname + parsedUrl.search,
+                      method: 'POST',
+                      headers: {
+                          'Content-Type': 'application/json'
+                      }
+                  };
+                  
+                  const response = await sendToSlack(options, slackMessage);
+                  console.log('Slack response:', response);
+                  
+                  return {
+                      statusCode: 200,
+                      body: 'Message sent to Slack successfully'
+                  };
+              } catch (error) {
+                  console.error('Error processing message:', error);
+                  return {
+                      statusCode: 500,
+                      body: `Error: ${error.message}`
+                  };
               }
-              
-              // Slackメッセージを構築
-              const slackMessage = {
-                  attachments: [{
-                      color: color,
-                      title: subject,
-                      text: message,
-                      footer: 'AWS CodePipeline Notification',
-                      ts: Math.floor(Date.now() / 1000)
-                  }]
-              };
-              
-              // Slackに送信
-              const webhookUrl = process.env.SLACK_WEBHOOK_URL;
-              const options = url.parse(webhookUrl);
-              options.method = 'POST';
-              options.headers = {
-                  'Content-Type': 'application/json'
-              };
-              
+          };
+          
+          // S3から最新のテストレポートのURLを取得する関数
+          async function getLatestTestReportUrl() {
+              try {
+                  const bucketName = process.env.PLAYWRIGHT_REPORTS_BUCKET;
+                  if (!bucketName) {
+                      throw new Error('PLAYWRIGHT_REPORTS_BUCKET環境変数が設定されていません');
+                  }
+                  
+                  // S3バケットの最新のオブジェクトを取得
+                  const params = {
+                      Bucket: bucketName,
+                      Prefix: 'report-',  // テストレポートのプレフィックスがあれば指定
+                      MaxKeys: 10
+                  };
+                  
+                  const data = await s3.listObjectsV2(params).promise();
+                  if (!data.Contents || data.Contents.length === 0) {
+                      console.log('テストレポートが見つかりませんでした');
+                      return null;
+                  }
+                  
+                  // 最新のフォルダを特定（LastModifiedで並べ替え）
+                  const latestObject = data.Contents.sort((a, b) => 
+                      new Date(b.LastModified) - new Date(a.LastModified)
+                  )[0];
+                  
+                  // index.htmlへのパスを構築
+                  let reportPath;
+                  if (latestObject.Key.endsWith('/')) {
+                      reportPath = `${latestObject.Key}index.html`;
+                  } else if (latestObject.Key.endsWith('index.html')) {
+                      reportPath = latestObject.Key;
+                  } else {
+                      // ディレクトリの場合はindex.htmlを追加、そうでない場合はそのまま
+                      reportPath = latestObject.Key.includes('/') && !latestObject.Key.endsWith('/') 
+                          ? latestObject.Key 
+                          : `${latestObject.Key}/index.html`;
+                  }
+                  
+                  // S3ウェブサイトエンドポイントURL
+                  const websiteUrl = `https://${bucketName}.s3-website-${process.env.REGION}.amazonaws.com/${reportPath}`;
+                  console.log('テストレポートURL:', websiteUrl);
+                  
+                  return websiteUrl;
+              } catch (error) {
+                  console.error('S3レポート取得エラー:', error);
+                  return null;
+              }
+          }
+          
+          function sendToSlack(options, message) {
               return new Promise((resolve, reject) => {
                   const req = https.request(options, (res) => {
                       let responseBody = '';
@@ -346,22 +500,27 @@ Resources:
                           responseBody += chunk;
                       });
                       res.on('end', () => {
-                          resolve({
-                              statusCode: res.statusCode,
-                              body: responseBody
-                          });
+                          if (res.statusCode >= 200 && res.statusCode < 300) {
+                              resolve({
+                                  statusCode: res.statusCode,
+                                  body: responseBody
+                              });
+                          } else {
+                              console.error(`Slack返答エラー: ${res.statusCode} ${responseBody}`);
+                              reject(new Error(`Slack API returned status code ${res.statusCode}: ${responseBody}`));
+                          }
                       });
                   });
                   
                   req.on('error', (err) => {
-                      console.error('Error sending to Slack:', err);
+                      console.error('Slackへの送信エラー:', err);
                       reject(err);
                   });
                   
-                  req.write(JSON.stringify(slackMessage));
+                  req.write(JSON.stringify(message));
                   req.end();
               });
-          };
+          }
       Tags:
         - Key: Name
           Value: !Sub "${AWS::StackName}-SlackNotificationFunction"
@@ -398,6 +557,18 @@ Resources:
             Action: 'sts:AssumeRole'
       ManagedPolicyArns:
         - 'arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole'
+      Policies:
+        - PolicyName: 'SlackNotificationPolicy'
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: 'Allow'
+                Action:
+                  - 's3:ListBucket'
+                  - 's3:GetObject'
+                Resource:
+                  - !Sub 'arn:aws:s3:::${PlaywrightReportsBucketName}'
+                  - !Sub 'arn:aws:s3:::${PlaywrightReportsBucketName}/*'
       Tags:
         - Key: Name
           Value: !Sub "${AWS::StackName}-SlackNotificationRole"
