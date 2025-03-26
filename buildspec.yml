@@ -64,9 +64,9 @@ phases:
       # S3にアップロード
       - echo "Uploading reports to S3"
       - REPORT_FOLDER=playwright_report_$(date +%Y%m%d_%H%M%S)
-      - aws s3 sync playwright-report s3://$REPORT_S3_BUCKET/e2e/$REPORT_FOLDER --acl bucket-owner-full-control
-      - echo "Reports uploaded to S3 bucket: $REPORT_S3_BUCKET/$REPORT_FOLDER"
-      - echo "S3 URL: https://s3.console.aws.amazon.com/s3/buckets/$REPORT_S3_BUCKET?region=$AWS_REGION&prefix=$REPORT_FOLDER/"
+      - aws s3 cp playwright-report s3://$REPORT_S3_BUCKET/e2e/$REPORT_FOLDER --recursive --acl bucket-owner-full-control
+      - echo "Reports uploaded to S3 bucket $REPORT_S3_BUCKET/e2e/$REPORT_FOLDER"
+      - echo "S3 URL: s3://$REPORT_S3_BUCKET/e2e/$REPORT_FOLDER/"
 
 reports:
   e2e-reports:
